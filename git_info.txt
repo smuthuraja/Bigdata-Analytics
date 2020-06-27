@@ -1,0 +1,12 @@
+how to move the folders and files in github to local hard drive?
+
+Go to tis folder,
+/c/Personal/Official/Technical_Upskilling/BigData_Architect_Course_Details/Simplilearn/BigData_Hadoop_Administrator/Git/GitContent/
+
+git clone https://github.com/ajaykuma/PythonTests.git
+
+cd PythonTests
+
+ls
+
+git remote -v
