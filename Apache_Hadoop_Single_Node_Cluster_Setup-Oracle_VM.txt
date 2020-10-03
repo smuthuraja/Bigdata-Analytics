@@ -1,0 +1,210 @@
+Apache Hadoop Installation steps:
+---------------------------------
+
+1) Download oracle vm virtualbox manager
+https://www.virtualbox.org/wiki/Downloads
+
+2) Download the Ubuntu 14 Server
+http://releases.ubuntu.com/14.04/
+
+3) Install Ubuntu Server and Desktop
+sudo apt-get install ubuntu-desktop
+
+VM -> Settings -> Storage -> Create Empty disc under Control IDE 
+Start Ubuntu and go to Device -> Insert Guest Additions CD image -> browse to the .iso file you'd like to mount and then install
+
+4) Install java (pre-req for hadoop 2.7)
+sudo apt-get update
+sudo apt-get install openjdk-7-jdk	
+java -version
+
+5) Install ssh (pre-req for hadoop 2.7)
+sudo apt-get install ssh
+
+6) Install rsync (pre-req for hadoop 2.7)
+sudo apt-get install rsync
+
+7) Download hadoop
+http://www.apache.org/dyn/closer.cgi/hadoop/common
+
+Download  Hadoop: wget http://apachemirror.wuchna.com/hadoop/common/hadoop-2.7.7/hadoop-2.7.7.tar.gz
+
+8)
+/home/hadoop
+ls -l
+tar xvzf hadoop-2.7.7.tar.gz
+ls -l
+Creating soft link for hadoop directory: sudo ln -s /home/hadoop/hadoop-2.7.7 /usr/local/hadoop
+ls -l /usr/local
+
+9) Set the environment variables:
+vi ~/.bashrc
+export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
+export HADOOP_PREFIX=/usr/local/hadoop
+export PATH=$PATH:$HADOOP_PREFIX/bin:$HADOOP_PREFIX/sbin
+Implement the .bashrc changes using source command: source ~/.bashrc
+Verify the path settings: hadoop
+
+10) Generate SSH keys for password less communication: ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa
+To append the keys to authorized keys: cat ~/.ssh/id_dsa.pub >> ~/.ssh/authorized_keys
+SSH Verification: ssh localhost
+exit
+
+11) Verifying the Haadoop subdirectories: 
+ls -l /usr/local/hadoop/
+ls -l /usr/local/hadoop/etc/hadoop/
+
+12)
+nano /usr/local/hadoop/etc/hadoop/core-site.xml
+Enter the HDFS Namename configuration properties
+
+<configuration>
+<property>
+<name>fs.defaultFS</name>
+<value>hdfs://localhost:9000</value>
+</property>
+</configuration>
+
+nano /usr/local/hadoop/etc/hadoop/hdfs-site.xml
+
+<configuration>
+<property>
+<name>dfs.replication</name>
+<value>1</value>
+</property>
+</configuration>
+
+Copy the mapred-site.xml.template file:
+cp /usr/local/hadoop/etc/hadoop/mapred-site.xml.template /usr/local/hadoop/etc/hadoop/mapred-site.xml
+
+nano /usr/local/hadoop/etc/hadoop/mapred-site.xml
+
+<configuration>
+<property>
+<name>mapreduce.framework.name</name>
+<value>yarn</value>
+</property>
+</configuration>
+
+nano /usr/local/hadoop/etc/hadoop/yarn-site.xml
+
+<configuration>
+<property>
+<name>yarn.nodemanager.aux-services</name>
+<value>mapreduce_shuffle</value>
+</property>
+</configuration>
+
+nano /usr/local/hadoop/etc/hadoop/hadoop-env.sh
+
+export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
+
+13) 
+Initiate the Namenode and format it: hdfs namenode -format
+Starting the name node, data node and secondary name node: start-dfs.sh
+verify the status: jps
+
+14) 
+Start the yarn deamon: start-yarn.sh
+verify the status: jps
+
+15) Verify the HDFS directory listing: hadoop fs -ls /
+Create a directory in HDFS: hadoop fs -mkdir /training
+
+16) Installing hive:
+download: wget http://mirrors.estointernet.in/apache/hive/stable-2/apache-hive-2.3.6-bin.tar.gz
+
+Unzip: tar xvzf apache-hive-2.3.6-bin.tar.gz
+ls -l
+Creating soft link for hive directory: sudo ln -s /home/hadoop/apache-hive-2.3.6-bin /usr/local/hive
+sudo ls -l /usr/local/hive
+
+hadoop fs -mkdir /tmp
+Change permission: hadoop fs -mkdir -p /user/hive/warehouse										
+Change mode: hadoop fs -chmod g+w /tmp 													
+Change permission for hive/warehouse: hadoop fs -chmod g+w /user/hive/warehouse
+
+Set the environment variables:
+vi ~/.bashrc
+export HIVE_HOME=/usr/local/hive
+export HIVE_CONF_DIR=${HIVE_HOME}/conf
+export PATH=$HIVE_HOME/bin:$PATH
+export CLASSPATH=$CLASSPATH:${HADOOP_HOME}/lib/*:.
+export CLASSPATH=$CLASSPATH:${HIVE_HOME}lib/*:.
+
+Implement the .bashrc changes using source command: source ~/.bashrc
+
+printenv |grep hive
+
+cd $HIVE_CONF_DIR
+
+Copy the hive-env.sh.template file: cp hive-env.sh.template hive-env.sh
+
+vi hive-env.sh
+HADOOP_HOME=/usr/local/hadoop
+
+Copy the hive-default.xml.template file: cp hive-default.xml.template hive-site.xml
+vi hive-site.xml
+
+cd /home/hadoop/apache-hive-2.3.6-bin/conf/
+vi hive-site.xml
+Made the following changes:
+Search for "hive.exec.scratchdir" under name and update "/tmp/hive-${user.name}" under value
+Search for "hive.exec.local.scratchdir" under name and update "/tmp/${user.name}" under value
+Search for "hive.downloaded.resources.dir" under name and update "/tmp/${user.name}_resources" under value
+Search for "hive.scratch.dir.permission" under name and update "733" under value
+esc:wq!
+
+schematool -dbType derby -initSchema
+
+ls metastore_db/
+
+hive
+
+beeline -u jdbc:hive2://
+
+17) Installing Sqoop:
+download: wget http://apachemirror.wuchna.com/sqoop/1.4.7/sqoop-1.4.7.bin__hadoop-2.6.0.tar.gz
+
+Unzip: tar xvzf sqoop-1.4.7.bin__hadoop-2.6.0.tar.gz
+
+sudo cp -r sqoop-1.4.7.bin__hadoop-2.6.0 /usr/local/sqoop
+
+sudo vi $HOME/.bashrc
+
+Enter the following in .bashrc file:
+export PATH=$PATH:/usr/local/sqoop
+export HADOOP_COMMON_HOME=/usr/local/hadoop
+export HADOOP_MAPRED_HOME=/usr/local/hadoop
+export HIVE_HOME=/usr/local/hive
+export PATH=$PATH:/usr/local/sqoop/bin
+
+MySQL Server Installation: sudo apt-get install mysql-server
+
+Optional: (pleae follow the below steps in case there is an issue when installing mysql-server)
+"For 12.04 and newer-
+You can delete the lock file with the following command:
+
+sudo rm /var/lib/apt/lists/lock
+
+You may also need to delete the lock file in the cache directory
+
+sudo rm /var/cache/apt/archives/lock"
+
+sudo apt-get install mysql-server
+
+mysql -u root -p
+
+exit
+
+wget https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-8.0.19.tar.gz
+
+cp mysql-connector-java-8.0.19.tar.gz /usr/local/sqoop/lib
+
+ls -l /usr/local/sqoop/lib
+
+sudo chown hadoop /usr/local/sqoop
+
+sudo chown hadoop /usr/local/sqoop/lib
+
+https://www.mysql.com/downloads/																																																												

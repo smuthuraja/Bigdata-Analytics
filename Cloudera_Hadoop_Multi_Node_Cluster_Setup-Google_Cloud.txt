@@ -1,0 +1,166 @@
+Cloudera Hadoop - Multi Node Cluster Setup in Google Cloud:
+-----------------------------------------------------------
+Pre-requisites: 
+
+Putty: https://www.a2hosting.com/kb/getting-started-guide/accessing-your-account/keeping-ssh-connections-alive
+
+Use puttygen to create a public and private keys
+
+Open puttygen and click on generate, move the cursor here and there
+Keys will be created
+
+Save the private key in local (.ppk file) - To get into Putty -> SSH - Auth
+Copy and paste the newly generated public key and paste in the notepad as text file (to paste when creating the VM instance in Google cloud)
+Go to Conversion menu -> Export OpenSSH Key and save as pem file (.pem file) - For cloudera installer
+
+Note: Make sure you are giving the name and password when creating keys
+
+Login into free version of google cloud and Create a New VM instance template by getting into Compute Engine -> Instance Templates
+When creating the template, choose the options based on your needs (OS would be CentOS 7) and paste the public key under the Security
+
+Create new VM instances by refering the VM instance template that we have created recently with different names (For ex: cm1, cm2, cm3)
+
+Select the first machine, click on 3 dots and select "View Network details", then select Firewall rules to see the ingress and Egress related to the machine 
+
+Click on Firewall in Google cloud and create a new Firewall Rule with Direction as Egress, Action on Match as Allow, Target tags as MyConn, IP ranges as 0.0.0.0/0, Protocols and Ports as All and keep other as a default
+
+Come back to VM instances, copy the external ips of all the machines, go to putty enter the ip in hostname with the prefix of the name given when generating keys, in my case it would be gcp, so it is gcp@34.72.247.51, give the machine name as given in google cloud, then go to SSH->Auth in putty window, select browse and get the private key file and save it. Do the same for all the machines.
+
+gcp@34.68.215.176
+gcp@34.70.51.67
+gcp@35.184.194.155
+
+
+
+Select the relevant hostname in the putty and click on open will take you to the machine where you need to give the password you have created during the time of generating the keys
+
+Now are accessing the machine
+
+
+in the machine, logon as su (root) and enter your machine IP details in all the machines as mentioned below (in my case it is..)
+
+sudo su
+vi /etc/hosts
+
+insert the following into the existing ones in all the machines
+
+10.128.0.12 cm1
+10.128.0.13 cm2
+10.128.0.14 cm3
+
+Then run the following command to download cloudera
+
+wget https://archive.cloudera.com/cm5/installer/5.16/cloudera-manager-installer.bin
+
+chmod -R 777 cloudera-manager-installer.bin
+
+./cloudera-manager-installer.bin
+
+Refer the file Setup Cloudera Cluster on AWS.pdf from page 22 to do the rest of the steps
+
+Use this link in future (ip is your local host which is google could instance cm1 public ip)
+
+http://34.68.215.176:7180/
+
+ls /var/log and check the files
+
+check the status of cloudera manager
+
+service cloudera-scm-server status
+
+check the status of network time protocol
+
+service ntp status
+
+Get into the following URL:
+
+http://34.68.215.176:7180/
+
+enter admin/admin
+
+change the password under admin -> change password
+
+set the new password (in this case it would be gcpcdh)
+
+Click the check box and click ok in the first page
+
+Select "Cloudera Enterprise Trial 5.16.2" and Click on Continue
+
+Give the hostnames as below (in this case, it would be as below) and click on Search and then click on Continue
+cm1
+cm2
+cm3
+
+Note: It will display all the machines that we have created in Google Cloud
+
+Keep default settings and Click on Continue
+
+Check Install Oracle Java SE Development Kit (JDK 7) and Click on Continue
+
+Keep default settings and Click on Continue
+
+Select Another User as gcp for Login, All hosts accept same private key for Authentication Method, choose the PEM file under Private Key File, enter passphrase that we have created during the time of creating the keys in puttygen, keep default settings and Click on Continue
+
+In this step, cloudera agent and jdk will be installed on all the machines, we have already installed cloudera manager in the first machine. 
+
+Once the installation is completed in all the machines successfully, check the status of cloudera agent in all the putty machines
+
+service cloudera-scm-agent status
+
+Come back to the browser  
+In this "Install Pracel" page, check downloaded, distributed, unpacked and activated are done anc check the below paths in the machine (cm1)
+
+ls /opt/cloudera/parcel-repo
+ls /opt/cloudera/parcel-cache
+ls /opt/cloudera/parcels
+vi /etc/cloudera-scm-agent/config.ini
+vi /etc/cloudera-scm-server/db.mgmt.properties
+vi /etc/cloudera-scm-server/db.properties
+
+Check the following in all the machines
+
+ls -all /opt/cloudera/parcels
+
+Click on Continue
+
+In the next page, for the below warning
+
+Cloudera recommends setting /proc/sys/vm/swappiness to a maximum of 10. Current setting is 60. Use the sysctl command to change this setting at run time and edit /etc/sysctl.conf for this setting to be saved after a reboot. You can continue with installation, but Cloudera Manager might report that your hosts are unhealthy because they are swapping. The following hosts are affected:
+
+correct the files in putty machines as follows
+
+vi /etc/sysctl.conf and insert the following line as 6th line
+
+vm.swappiness=10
+
+sudo sysctl -p
+
+Click on Run Again and click on Finish
+
+Select Core Hadoop in Cluster Setup and click on Continue
+
+Distribute the roles accordingly between the machines, refer the Cloudera_Installation_Info word document stored under the following path (in my case it would be)
+
+C:\Personal\Official\Technical_Upskilling\BigData_Architect_Course_Details\Simplilearn\BigData_Hadoop_Administrator
+
+Keep default settings and Click on Test Connection and then click on Continue
+
+Keep default settings and click on Continue
+
+Wait for all the service to be started and click on Continue
+
+You will be getting the following message and click on Finish
+
+The services are installed, configured, and running on your cluster.
+
+We can now see the Cloudera Manager up and running
+
+Go to the following path:
+
+C:\Personal\Official\Technical_Upskilling\BigData_Architect_Course_Details\Simplilearn\BigData_Hadoop_Administrator\Recordings
+
+Select the following file
+
+big_data_and_hadoop_administrator_batch_3_apr_18-19-25-26_may_2-3-9-10-16_2020-20200502_1300-1_1588451128.arf
+
+and go to 2:19

@@ -1,0 +1,371 @@
+Apache Hadoop - Multi Node Cluster Setup in Oracle VM Virtual Box:
+-------------------------------------------------------------------
+
+******** Also Refer the youtube url https://youtu.be/ZVbEykh87lw ********
+
+sudo su --- to login as root and execute the following to install the required softwares
+
+apt-get install vim
+apt-get install wget
+apt-get install ntp
+apt-get install openssh-server
+apt-get install rsync
+apt-get install git
+apt-get update
+
+sudo ufw disable
+
+ip address
+copy the ipaddress (192.168.xx.xx) and type 
+vi /etc/hosts, add the copied ipaddress and make the machine name as m1 as below
+
+update your /etc/hosts
+127.0.0.1     localhost
+192.168.xx.xx m1
+
+Do the same for m2 and m3....make sure all the machine details are updated as below
+
+ex:
+127.0.0.1       localhost
+192.168.56.101  m1
+192.168.56.102  m2
+192.168.56.103  m3
+
+# The following lines are desirable for IPv6 capable hosts
+::1     ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+~                        
+
+To change the machine name, vi /etc/hostname and change the machine name (m1) appropriately and reboot it
+
+Do the same for m2 and m3
+
+type hostname and check the machine name
+
+sudo visudo 
+and add <user> as user next to root where you see ALL as below. This will give your user sudo access
+
+root    ALL=(ALL:ALL) ALL
+hadoop  ALL=(ALL:ALL) ALL
+
+
+Download oracle jdk from oracle site
+create a directory under /usr/lib
+cd /usr/lib
+mkdir jvm
+cd jvm
+sudo tar -xvf /home/mac/Downloads/jdk****
+
+update your java path in your user's .bashrc
+(ex: my user hadoop)
+su - hadoop
+
+vi .bashrc
+export JAVA_HOME=/usr/lib/jvm/jdk****
+export PATH=$PATH:$JAVA_HOME/bin
+
+save your .bashrc
+refresh it by ---> source .bashrc
+
+$java -version ( does it show your java version)
+
+download hadoop tar from http://archive.apache.org/dist/hadoop/common/
+Lets get hadoop-2.6.5 and hadoop-2.8.3 under /home/hadoop/Downloads
+To untar and create dir ,to create link and to change owner of directory
+-----------------------------
+
+Lets untar it in /usr/local
+cd /usr/local
+$ sudo tar -xvf /home/hadoop/Downloads/hadoop-2.6.5.tar.gz
+$ sudo tar -xvf /home/hadoop/Downloads/hadoop-2.8.3.tar.gz
+$ sudo ln -s hadoop-2.6.5 hadoop
+$ sudo chown -R hadoop:hadoop hadoop* -----------------(am making user -hadoop as owner and will be admin for hadoop)
+ls -all
+
+update hadoop path in .bashrc for 'mac' user
+vi .bashrc
+export HADOOP_INSTALL=/usr/local/hadoop
+export PATH=$PATH:$HADOOP_INSTALL/bin
+export PATH=$PATH:$HADOOP_INSTALL/sbin
+
+save your .bashrc
+refresh it ----> source .bashrc
+
+hadoop version - to check the version of hadoop
+
+Now Generate ssh keys for your user on ubuntu
+
+ssh pre-req:
+---------------
+vi /etc/ssh/sshd_config
+Go to file and edit as below:
+PermitRootLogin yes
+close the file
+service ssh restart
+Reset the password using below command:
+passwd
+
+
+To have SSH access across machines
+1.generate ssh keys as a home user (in my case its hadoop) using 
+-----------------------------------------------------------------
+ssh-keygen -t rsa -P ""
+
+2.Distributing ssh public keys to other machines as a hadoop user
+-------------------------------------------------------------------
+In m1,ssh-copy-id -i $HOME/.ssh/id_rsa.pub hadoop@m2
+In m1,ssh-copy-id -i $HOME/.ssh/id_rsa.pub hadoop@m3
+In m1,ls -all .ssh
+In m2,ssh-copy-id -i $HOME/.ssh/id_rsa.pub hadoop@m1
+In m2,ssh-copy-id -i $HOME/.ssh/id_rsa.pub hadoop@m3
+In m2,ls -all .ssh
+In m3,ssh-copy-id -i $HOME/.ssh/id_rsa.pub hadoop@m1
+In m3,ssh-copy-id -i $HOME/.ssh/id_rsa.pub hadoop@m2
+In m3,ls -all .ssh
+
+3.To enable SSH access to your local machine with this newly created key
+-----------------------------------------------------------------------------
+In m1,cat $HOME/.ssh/id_rsa.pub >> $HOME/.ssh/authorized_keys
+In m1,ssh m1
+In m2,cat $HOME/.ssh/id_rsa.pub >> $HOME/.ssh/authorized_keys
+In m2,ssh m2
+In m3,cat $HOME/.ssh/id_rsa.pub >> $HOME/.ssh/authorized_keys
+In m3,ssh m3
+
+type ufw disable in all the machines to disable the firewall
+
+
+hadoop version ( does it show your hadoop version)
+=========================================================
+
+Editing config files to setup cluster
+config files:(you can use ports 8020 for core and 8021 for mapred also)
+or
+config files:(you can use ports 9000 for core and 9001 for mapred also)
+
+**replace hostname with name of your node where you want to run a particular process/daemon
+
+Multi node cluster setup:
+-------------------------
+m1-nn,dn,rm,nm
+m2-dn,nm,snn
+m3-dn,nm
+
+m1:
+
+Go to, cd /usr/local/hadoop/etc/hadoop
+vi core-site.xml
+
+<property>
+  <name>fs.defaultFS</name>
+  <value>hdfs://m1:9000</value>
+</property>
+
+mv mapred-site.xml.template mapred-site.xml
+vi mapred-site.xml
+
+<property>
+  <name>mapreduce.framework.name</name>
+  <value>yarn</value>
+</property>
+
+vi hdfs-site.xml
+
+<property>
+<name>dfs.replication</name>
+<value>3</value>
+</property>
+
+<property>
+<name>dfs.namenode.name.dir</name>
+<value>/orgz/name</value>
+</property>
+
+<property>
+<name>dfs.datanode.data.dir</name>
+<value>/orgz/data</value>
+<final>true</final>
+</property>
+
+<property>
+<name>dfs.namenode.http-address</name>
+<value>m1:50070</value>
+</property>
+
+<property>
+<name>dfs.namenode.secondary.http-address</name>
+<value>m2:50090</value>
+</property>
+
+vi yarn-site.xml
+
+<property>
+<name>yarn.resourcemanager.address</name>
+<value>m1:9001</value>
+</property>
+
+<property>
+<name>yarn.resourcemanager.resource-tracker.address</name>
+<value>m1:8031</value>
+</property>
+
+<property>
+<name>yarn.nodemanager.aux-services.mapreduce_shuffle.class</name>
+<value>org.apache.hadoop.mapred.ShuffleHandler</value>
+</property>
+
+<property>
+<name>yarn.nodemanager.aux-services</name>
+<value>mapreduce_shuffle</value>
+</property>
+
+<property>
+<name>yarn.nodemanager.pmem-check-enabled</name>
+<value>false</value>
+</property>
+
+<property>
+<name>yarn.nodemanager.vmem-check-enabled</name>
+<value>false</value>
+</property>
+
+<property>
+<name>yarn.log-aggregation-enable</name>
+<value>true</value>
+</property>
+
+<property>
+<name>yarn.nodemanager.log-aggregation.roll-monitoring-interval-seconds</name>
+<value>3600</value>
+</property>
+
+vi slaves
+m1
+m2
+m3
+
+Moving the files to m2
+
+scp core-site.xml hadoop@m2:/usr/local/hadoop/etc/hadoop
+scp mapred-site.xml hadoop@m2:/usr/local/hadoop/etc/hadoop
+scp hdfs-site.xml hadoop@m2:/usr/local/hadoop/etc/hadoop
+scp yarn-site.xml hadoop@m2:/usr/local/hadoop/etc/hadoop
+scp slaves hadoop@m2:/usr/local/hadoop/etc/hadoop
+
+m2:
+
+No changes in core-site.xml, mapred-site.xml, yarn-site.xml and slaves
+
+vi hdfs-site.xml
+
+<property>
+<name>dfs.replication</name>
+<value>3</value>
+</property>
+
+<property>
+<name>dfs.datanode.data.dir</name>
+<value>/orgz/data2</value>
+<final>true</final>
+</property>
+
+<property>
+<name>dfs.namenode.http-address</name>
+<value>m1:50070</value>
+</property>
+
+<property>
+<name>dfs.namenode.secondary.http-address</name>
+<value>m2:50090</value>
+</property>
+
+<property>
+<name>dfs.namenode.checkpoint.period</name>
+<value>600</value>
+</property>
+
+Moving the files to m3
+
+scp core-site.xml hadoop@m3:/usr/local/hadoop/etc/hadoop
+scp mapred-site.xml hadoop@m3:/usr/local/hadoop/etc/hadoop
+scp hdfs-site.xml hadoop@m3:/usr/local/hadoop/etc/hadoop
+scp yarn-site.xml hadoop@m3:/usr/local/hadoop/etc/hadoop
+scp slaves hadoop@m3:/usr/local/hadoop/etc/hadoop
+
+m3:
+
+No changes in core-site.xml, mapred-site.xml, yarn-site.xml and slaves
+
+vi hdfs-site.xml
+
+<property>
+<name>dfs.replication</name>
+<value>3</value>
+</property>
+
+<property>
+<name>dfs.datanode.data.dir</name>
+<value>/orgz/data3</value>
+<final>true</final>
+</property>
+
+<property>
+<name>dfs.namenode.http-address</name>
+<value>m1:50070</value>
+</property>
+
+<property>
+<name>dfs.namenode.secondary.http-address</name>
+<value>m2:50090</value>
+</property>
+
+create the folder /orgz in all machines (m1, m2, m3) as below and give permission:
+
+sudo mkdir /orgz
+sudo chown -R hadoop:hadoop /orgz
+
+In /home/hadoop folder in m1 machine, do the following to see the files under /orgz, there will be 2 files by default
+
+ls -all /orgz
+
+hdfs namenode -format (namenode formatting has to be done only once)
+
+do the following again to see the files under /orgz, there will be 3 files by default
+
+ls -all /orgz
+get into ls -all /orgz/name
+then into ls -all /orgz/name/current to see the default fsimage
+
+do cat /orgz/name/current/VERSION to find more details
+
+get into below path to run start-all.sh script:
+ls /usr/local/hadoop/sbin
+start-all.sh
+
+run the following command to see the list of service running in m1
+
+jps 
+
+do the same in all the machines by using ssh
+
+check the following paths in m2:
+ls /orgz/data2/current/BP-1015931900-192.168.56.101-1596293119125/current/finalized
+ls /orgz/data2/current/BP-1015931900-192.168.56.101-1596293119125/current/VERSION
+
+check the following paths in m3:
+ls /orgz/data3/current/BP-1015931900-192.168.56.101-1596293119125/current/finalized
+ls /orgz/data3/current/BP-1015931900-192.168.56.101-1596293119125/current/VERSION
+
+
+hdfs dfsadmin
+
+hdfs dfsadmin -report
+
+https://m1:50070
+
+https://m1:8088/cluster
+
+
